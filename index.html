@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wumpus Logic Agent — Dynamic KB Pathfinder</title>
+  <meta name="description" content="Web-based Dynamic Wumpus World Knowledge-Based Agent using Propositional Logic and Resolution Refutation for safe-cell deduction." />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ── HEADER ── -->
+<header>
+  <div class="header-brand">
+    <span class="logo">🧠</span>
+    <div>
+      <h1>Wumpus Logic Agent</h1>
+      <p>Dynamic KB Pathfinder · Propositional Logic · Resolution Refutation</p>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;align-items:center;">
+    <span class="header-badge">22F-3390 · AI Ass-6 Q6</span>
+    <span class="header-badge">CNF · Resolution</span>
+  </div>
+</header>
+
+<!-- ── MAIN LAYOUT ── -->
+<div class="app-layout">
+
+  <!-- ── LEFT PANEL: CONFIG + CONTROLS ── -->
+  <aside class="panel" id="left-panel">
+
+    <div class="panel-title">⚙️ Configuration</div>
+
+    <div class="card">
+      <h3>Grid Setup</h3>
+      <div class="config-row">
+        <label>Rows (2–10)</label>
+        <input type="number" id="rows-input" min="2" max="10" value="4" />
+      </div>
+      <div class="config-row">
+        <label>Columns (2–10)</label>
+        <input type="number" id="cols-input" min="2" max="10" value="4" />
+      </div>
+      <div class="config-row">
+        <label>Pit Probability</label>
+        <input type="number" id="pit-prob" min="0.05" max="0.4" step="0.05" value="0.15" />
+        <span class="config-hint">Fraction of cells that are pits (e.g. 0.15 = 15%)</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Simulation Speed</h3>
+      <div class="config-row">
+        <label>Speed — <span id="speed-label">2 steps/s</span></label>
+        <input type="range" id="speed-slider" min="100" max="1000" value="600" />
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Controls</h3>
+      <div class="btn-group">
+        <button class="btn btn-primary" id="btn-new-game">🎮 New Game</button>
+        <button class="btn btn-success" id="btn-step" disabled>⏭ Step</button>
+        <button class="btn btn-warning" id="btn-run" disabled>▶ Run Auto</button>
+        <button class="btn btn-secondary" id="btn-reveal" disabled>🔍 Reveal World</button>
+        <button class="btn btn-danger" id="btn-reset">🔄 Reset</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Legend</h3>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot agent"></div> 🤖 Agent</div>
+        <div class="legend-item"><div class="legend-dot safe"></div> ✓ Proven Safe (KB)</div>
+        <div class="legend-item"><div class="legend-dot visited"></div> 💨 Visited</div>
+        <div class="legend-item"><div class="legend-dot unknown"></div> ? Unknown</div>
+        <div class="legend-item"><div class="legend-dot danger"></div> ⚠️ Confirmed Danger</div>
+        <div class="legend-item"><div class="legend-dot wumpus"></div> 👹 Wumpus (revealed)</div>
+      </div>
+      <div style="margin-top:10px;font-size:0.7rem;color:var(--text-secondary);">
+        <div>💨 Breeze = Pit nearby</div>
+        <div>💀 Stench = Wumpus nearby</div>
+        <div>✨ Glitter = Gold!</div>
+      </div>
+    </div>
+
+  </aside>
+
+  <!-- ── CENTRE: GRID VISUALIZATION ── -->
+  <main class="main-area">
+
+    <div id="game-over-banner" class="game-over-banner">
+      <div id="game-over-title">Game Over</div>
+      <div id="game-over-detail"></div>
+    </div>
+
+    <div class="grid-header">
+      <h2>🗺️ Wumpus World</h2>
+      <span id="grid-size-label">4 × 4</span>
+    </div>
+
+    <div id="grid-container"></div>
+
+    <div id="status-bar" class="status-bar status-info">
+      Configure grid parameters and click "New Game" to begin.
+    </div>
+
+    <!-- Algo info box -->
+    <div class="card" style="width:100%;max-width:640px;">
+      <h3>🔬 Algorithm Details</h3>
+      <div style="font-size:0.75rem;color:var(--text-secondary);line-height:1.8;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <div><strong style="color:var(--accent)">KB Representation</strong><br>Propositional Logic, CNF Clauses</div>
+        <div><strong style="color:var(--accent)">Inference</strong><br>Resolution Refutation (Proof by Contradiction)</div>
+        <div><strong style="color:var(--accent)">Percepts</strong><br>Breeze → Pit adj · Stench → Wumpus adj</div>
+        <div><strong style="color:var(--accent)">Strategy</strong><br>Safe-first BFS · Backtrack · Risk fallback</div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ── RIGHT PANEL: METRICS + LOGS ── -->
+  <aside class="panel" id="right-panel">
+
+    <div class="panel-title">📊 Real-Time Metrics</div>
+
+    <div class="card">
+      <h3>Performance</h3>
+      <div class="metrics-grid">
+        <div class="metric-box">
+          <div class="metric-value" id="metric-moves">0</div>
+          <div class="metric-label">Moves</div>
+        </div>
+        <div class="metric-box">
+          <div class="metric-value" id="metric-visited">0</div>
+          <div class="metric-label">Visited</div>
+        </div>
+        <div class="metric-box">
+          <div class="metric-value" id="metric-safe" style="color:var(--accent2)">0</div>
+          <div class="metric-label">Safe Proved</div>
+        </div>
+        <div class="metric-box">
+          <div class="metric-value" id="metric-clauses" style="color:var(--purple)">0</div>
+          <div class="metric-label">KB Clauses</div>
+        </div>
+        <div class="metric-box full">
+          <div class="metric-value" id="metric-inference" style="color:var(--warning)">0</div>
+          <div class="metric-label">Total Inference Steps (Resolution)</div>
+        </div>
+        <div class="metric-box full">
+          <div class="metric-value" id="metric-status">Idle</div>
+          <div class="metric-label">Agent Status</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Current Percepts</h3>
+      <div class="percept-row">
+        <span class="percept-key">Position</span>
+        <span class="percept-val" id="agent-pos-display">—</span>
+      </div>
+      <div class="percept-row">
+        <span class="percept-key">Active</span>
+        <span class="percept-val" id="percept-display">—</span>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>🤖 Agent Log</h3>
+      <div class="log-container" id="agent-log">
+        <div class="log-entry" style="color:var(--text-secondary)">Agent actions will appear here...</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>🔬 KB / Resolution Log</h3>
+      <div class="log-container" id="kb-log">
+        <div class="log-entry" style="color:var(--text-secondary)">KB inference steps will appear here...</div>
+      </div>
+    </div>
+
+  </aside>
+</div><!-- end app-layout -->
+
+<!-- ── SCRIPTS (order matters) ── -->
+<script src="js/kb.js"></script>
+<script src="js/agent.js"></script>
+<script src="js/ui.js"></script>
+
+</body>
+</html>
