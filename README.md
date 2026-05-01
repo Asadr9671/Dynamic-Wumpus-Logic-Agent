@@ -114,8 +114,4 @@ To prove `~P_0_1` (no pit at (0,1)):
 
 ---
 
-## 👤 Author
-
-**Student ID:** 22F-3390  
-**Course:** Artificial Intelligence — Assignment 6, Question 6  
-**Institution:** FAST-NUCES, Chiniot-Faisalabad Campus
+## 👤 Author: Asad Asghar
